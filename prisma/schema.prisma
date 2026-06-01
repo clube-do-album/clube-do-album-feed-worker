@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FeedItemType {
+  ALBUM_RATED
+
+  @@map("feed_item_type")
+}
+
+model FeedItem {
+  id String @id @default(uuid())
+
+  type    FeedItemType @default(ALBUM_RATED)
+  userId  String       @map("user_id")
+  albumId String       @map("album_id")
+  rating  Float?
+  message String
+
+  occurredAt DateTime @map("occurred_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([type, userId, albumId, occurredAt])
+  @@index([userId, createdAt])
+  @@index([albumId, createdAt])
+  @@map("feed_items")
+}
