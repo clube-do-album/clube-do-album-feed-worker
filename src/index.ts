@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { startAlbumRatedConsumer } from './consumers/album-rated.consumer.js';
+import { startUserFollowedConsumer } from './consumers/user-followed.consumer.js';
 import { startHttpServer } from './http/server.js';
 
 async function bootstrap() {
@@ -8,6 +9,7 @@ async function bootstrap() {
 
   startHttpServer();
   await startAlbumRatedConsumer();
+  await startUserFollowedConsumer();
 }
 
 bootstrap().catch((error) => {

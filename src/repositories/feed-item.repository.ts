@@ -9,6 +9,13 @@ interface CreateAlbumRatedFeedItemData {
   message: string;
 }
 
+interface CreateUserFollowedFeedItemData {
+  followerId: string;
+  followedId: string;
+  occurredAt: Date;
+  message: string;
+}
+
 export class FeedItemRepository {
   list(limit: number) {
     return prisma.feedItem.findMany({
@@ -63,6 +70,29 @@ export class FeedItemRepository {
       },
       update: {
         rating: data.rating,
+        message: data.message,
+      },
+    });
+  }
+
+  createUserFollowedFeedItem(data: CreateUserFollowedFeedItemData) {
+    return prisma.feedItem.upsert({
+      where: {
+        type_userId_targetUserId_occurredAt: {
+          type: FeedItemType.USER_FOLLOWED,
+          userId: data.followerId,
+          targetUserId: data.followedId,
+          occurredAt: data.occurredAt,
+        },
+      },
+      create: {
+        type: FeedItemType.USER_FOLLOWED,
+        userId: data.followerId,
+        targetUserId: data.followedId,
+        occurredAt: data.occurredAt,
+        message: data.message,
+      },
+      update: {
         message: data.message,
       },
     });

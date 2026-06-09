@@ -9,6 +9,7 @@ datasource db {
 
 enum FeedItemType {
   ALBUM_RATED
+  USER_FOLLOWED
 
   @@map("feed_item_type")
 }
@@ -18,7 +19,8 @@ model FeedItem {
 
   type    FeedItemType @default(ALBUM_RATED)
   userId  String       @map("user_id")
-  albumId String       @map("album_id")
+  albumId String?      @map("album_id")
+  targetUserId String? @map("target_user_id")
   rating  Float?
   message String
 
@@ -26,7 +28,9 @@ model FeedItem {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@unique([type, userId, albumId, occurredAt])
+  @@unique([type, userId, targetUserId, occurredAt])
   @@index([userId, createdAt])
   @@index([albumId, createdAt])
+  @@index([targetUserId, createdAt])
   @@map("feed_items")
 }

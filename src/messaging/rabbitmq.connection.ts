@@ -15,6 +15,14 @@ export function getAlbumRatedRoutingKey() {
   return process.env.ALBUM_RATED_ROUTING_KEY?.trim() || 'album.rated';
 }
 
+export function getUserFollowedQueue() {
+  return process.env.USER_FOLLOWED_QUEUE?.trim() || 'feed.user-followed.queue';
+}
+
+export function getUserFollowedRoutingKey() {
+  return process.env.USER_FOLLOWED_ROUTING_KEY?.trim() || 'user.followed';
+}
+
 export async function getRabbitChannel(): Promise<Channel> {
   if (channel) {
     return channel;

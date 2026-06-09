@@ -5,7 +5,10 @@ Worker responsavel por criar atividades do feed social da plataforma Clube do Al
 ## Responsabilidade
 
 - Consumir eventos `ALBUM_RATED` publicados pela Ratings API.
+- Consumir eventos `USER_FOLLOWED` publicados pela Social API.
 - Criar itens de feed quando um usuario avalia um album.
+- Criar itens de feed quando um usuario segue outro.
+- Enriquecer mensagens do feed usando Catalog API e Identity API.
 - Persistir os itens no PostgreSQL.
 - Expor endpoints HTTP para consultar o feed.
 
@@ -31,10 +34,14 @@ Variaveis esperadas:
 DATABASE_URL=postgresql://clube:clube@127.0.0.1:15432/clube_do_album_feed
 RABBITMQ_URL=amqp://clube:clube@localhost:5672
 SERVER_PORT=3003
+CATALOG_API_URL=http://localhost:3001
+IDENTITY_API_URL=http://localhost:8081
 
 RABBITMQ_EXCHANGE=clube-do-album.events
 ALBUM_RATED_QUEUE=feed.album-rated.queue
 ALBUM_RATED_ROUTING_KEY=album.rated
+USER_FOLLOWED_QUEUE=feed.user-followed.queue
+USER_FOLLOWED_ROUTING_KEY=user.followed
 ```
 
 ## Migrations
@@ -61,6 +68,7 @@ No PowerShell:
 
 ```powershell
 Get-Content prisma\migrations\20260601030000_init_feed_schema\migration.sql | docker exec -i clube-do-album-postgres psql -U clube -d clube_do_album_feed
+Get-Content prisma\migrations\20260602090000_add_user_followed_feed_items\migration.sql | docker exec -i clube-do-album-postgres psql -U clube -d clube_do_album_feed
 ```
 
 Para gerar o Prisma Client:
@@ -145,7 +153,9 @@ Exemplo:
 curl.exe "http://localhost:3003/feed/albums/uuid-do-album?limit=10"
 ```
 
-## Evento consumido
+## Eventos consumidos
+
+### ALBUM_RATED
 
 ```text
 Exchange: clube-do-album.events
@@ -167,11 +177,41 @@ Payload esperado:
 }
 ```
 
-Ao receber o evento, o worker cria um registro em:
+### USER_FOLLOWED
+
+```text
+Exchange: clube-do-album.events
+Tipo: topic
+Fila: feed.user-followed.queue
+Routing key: user.followed
+Evento consumido: USER_FOLLOWED
+```
+
+Payload esperado:
+
+```json
+{
+  "event": "USER_FOLLOWED",
+  "followerId": "uuid-do-seguidor",
+  "followedId": "uuid-do-seguido",
+  "occurredAt": "2026-05-31T18:00:00.000Z"
+}
+```
+
+Ao receber os eventos, o worker cria registros em:
 
 ```text
 feed_items
 ```
+
+O worker tenta enriquecer as mensagens consultando:
+
+```text
+Catalog API: dados do album
+Identity API: dados dos usuarios
+```
+
+Se algum servico interno estiver indisponivel, o worker usa o ID recebido no evento como fallback e continua processando a mensagem.
 
 ## Como testar manualmente
 
@@ -210,6 +250,8 @@ O worker deve registrar logs como:
 ```text
 ALBUM_RATED received for feed: albumId=uuid-do-album, userId=user-1
 Feed item created for ALBUM_RATED: uuid-do-feed-item
+USER_FOLLOWED received for feed: followerId=user-1, followedId=user-2
+Feed item created for USER_FOLLOWED: uuid-do-feed-item
 ```
 
 Depois confirme no banco:
@@ -234,13 +276,17 @@ docker run -d --name clube-do-album-feed-worker \
   -e SERVER_PORT=3003 \
   -e DATABASE_URL=postgresql://clube:clube@clube-do-album-postgres:5432/clube_do_album_feed \
   -e RABBITMQ_URL=amqp://clube:clube@clube-do-album-rabbitmq:5672 \
+  -e CATALOG_API_URL=http://clube-do-album-catalog-api:3001 \
+  -e IDENTITY_API_URL=http://clube-do-album-identity-api:8081 \
   -e RABBITMQ_EXCHANGE=clube-do-album.events \
   -e ALBUM_RATED_QUEUE=feed.album-rated.queue \
   -e ALBUM_RATED_ROUTING_KEY=album.rated \
+  -e USER_FOLLOWED_QUEUE=feed.user-followed.queue \
+  -e USER_FOLLOWED_ROUTING_KEY=user.followed \
   -p 3003:3003 \
   clube-do-album-feed-worker
 ```
 
 ## Status atual
 
-Worker consome `ALBUM_RATED`, cria itens de feed em `feed_items` e expoe endpoints HTTP para consulta.
+Worker consome `ALBUM_RATED` e `USER_FOLLOWED`, enriquece mensagens com Catalog/Identity quando possivel, cria itens de feed em `feed_items` e expoe endpoints HTTP para consulta.
