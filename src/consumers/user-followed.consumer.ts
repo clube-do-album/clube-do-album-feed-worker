@@ -2,9 +2,9 @@ import type { ConsumeMessage } from 'amqplib';
 import type { UserFollowedEvent } from '../dtos/user-followed-event.dto.js';
 import {
   getRabbitChannel,
-  getRabbitExchange,
   getUserFollowedQueue,
   getUserFollowedRoutingKey,
+  setupConsumerQueue,
 } from '../messaging/rabbitmq.connection.js';
 import { FeedService } from '../services/feed.service.js';
 
@@ -15,11 +15,7 @@ export async function startUserFollowedConsumer() {
   const queue = getUserFollowedQueue();
   const routingKey = getUserFollowedRoutingKey();
 
-  await channel.assertQueue(queue, {
-    durable: true,
-  });
-
-  await channel.bindQueue(queue, getRabbitExchange(), routingKey);
+  await setupConsumerQueue(channel, queue, routingKey);
 
   console.log(`Waiting for ${routingKey} events...`);
 

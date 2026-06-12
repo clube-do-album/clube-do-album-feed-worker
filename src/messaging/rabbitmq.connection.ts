@@ -7,6 +7,10 @@ export function getRabbitExchange() {
   return process.env.RABBITMQ_EXCHANGE?.trim() || 'clube-do-album.events';
 }
 
+export function getDeadLetterExchange() {
+  return process.env.RABBITMQ_DEAD_LETTER_EXCHANGE?.trim() || 'clube-do-album.dead-letter';
+}
+
 export function getAlbumRatedQueue() {
   return process.env.ALBUM_RATED_QUEUE?.trim() || 'feed.album-rated.queue';
 }
@@ -36,20 +40,41 @@ export async function getRabbitChannel(): Promise<Channel> {
     durable: true,
   });
 
-  await rabbitChannel.assertQueue(getAlbumRatedQueue(), {
+  await rabbitChannel.assertExchange(getDeadLetterExchange(), 'direct', {
     durable: true,
   });
 
-  await rabbitChannel.bindQueue(
-    getAlbumRatedQueue(),
-    getRabbitExchange(),
-    getAlbumRatedRoutingKey(),
-  );
+  await setupConsumerQueue(rabbitChannel, getAlbumRatedQueue(), getAlbumRatedRoutingKey());
 
   connection = rabbitConnection;
   channel = rabbitChannel;
 
   return rabbitChannel;
+}
+
+export async function setupConsumerQueue(
+  rabbitChannel: Channel,
+  queue: string,
+  routingKey: string,
+) {
+  const deadLetterQueue = `${queue}.dlq`;
+  const deadLetterRoutingKey = `${queue}.dead`;
+
+  await rabbitChannel.assertQueue(deadLetterQueue, {
+    durable: true,
+  });
+
+  await rabbitChannel.bindQueue(deadLetterQueue, getDeadLetterExchange(), deadLetterRoutingKey);
+
+  await rabbitChannel.assertQueue(queue, {
+    durable: true,
+    arguments: {
+      'x-dead-letter-exchange': getDeadLetterExchange(),
+      'x-dead-letter-routing-key': deadLetterRoutingKey,
+    },
+  });
+
+  await rabbitChannel.bindQueue(queue, getRabbitExchange(), routingKey);
 }
 
 export async function closeRabbitConnection() {

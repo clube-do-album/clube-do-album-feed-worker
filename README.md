@@ -38,6 +38,7 @@ CATALOG_API_URL=http://localhost:3001
 IDENTITY_API_URL=http://localhost:8081
 
 RABBITMQ_EXCHANGE=clube-do-album.events
+RABBITMQ_DEAD_LETTER_EXCHANGE=clube-do-album.dead-letter
 ALBUM_RATED_QUEUE=feed.album-rated.queue
 ALBUM_RATED_ROUTING_KEY=album.rated
 USER_FOLLOWED_QUEUE=feed.user-followed.queue
@@ -154,6 +155,23 @@ curl.exe "http://localhost:3003/feed/albums/uuid-do-album?limit=10"
 ```
 
 ## Eventos consumidos
+
+## Dead Letter Queues
+
+As filas consumidas por este worker usam dead letter para mensagens rejeitadas com `nack(..., false, false)`.
+
+```text
+Dead letter exchange: clube-do-album.dead-letter
+Tipo: direct
+Filas:
+  feed.album-rated.queue.dlq
+  feed.user-followed.queue.dlq
+Routing keys:
+  feed.album-rated.queue.dead
+  feed.user-followed.queue.dead
+```
+
+Se as filas principais ja existirem no RabbitMQ sem argumentos de dead letter, recrie as filas antes de subir a nova versao do worker.
 
 ### ALBUM_RATED
 
@@ -279,6 +297,7 @@ docker run -d --name clube-do-album-feed-worker \
   -e CATALOG_API_URL=http://clube-do-album-catalog-api:3001 \
   -e IDENTITY_API_URL=http://clube-do-album-identity-api:8081 \
   -e RABBITMQ_EXCHANGE=clube-do-album.events \
+  -e RABBITMQ_DEAD_LETTER_EXCHANGE=clube-do-album.dead-letter \
   -e ALBUM_RATED_QUEUE=feed.album-rated.queue \
   -e ALBUM_RATED_ROUTING_KEY=album.rated \
   -e USER_FOLLOWED_QUEUE=feed.user-followed.queue \
