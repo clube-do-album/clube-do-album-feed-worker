@@ -3,5 +3,6 @@ export interface AlbumRatedEvent {
   albumId: string;
   userId: string;
   rating: number;
+  review?: string | null;
   occurredAt: string;
 }

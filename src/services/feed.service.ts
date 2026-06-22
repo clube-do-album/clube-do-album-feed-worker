@@ -37,11 +37,13 @@ export class FeedService {
     const albumName = album?.name ?? shortId(event.albumId);
     const artistName = album?.artistName ? ` de ${album.artistName}` : '';
     const message = `${userName} avaliou ${albumName}${artistName} com nota ${event.rating}`;
+    const review = normalizeReview(event.review);
 
     const feedItem = await feedItemRepository.createAlbumRatedFeedItem({
       albumId: event.albumId,
       userId: event.userId,
       rating: event.rating,
+      review,
       occurredAt,
       message,
     });
@@ -78,4 +80,12 @@ export class FeedService {
 
 function shortId(value: string) {
   return value.length > 12 ? `${value.slice(0, 8)}...` : value;
+}
+
+function normalizeReview(review?: string | null) {
+  if (!review?.trim()) {
+    return null;
+  }
+
+  return review.trim();
 }

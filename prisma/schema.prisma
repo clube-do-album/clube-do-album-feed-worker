@@ -22,6 +22,7 @@ model FeedItem {
   albumId String?      @map("album_id")
   targetUserId String? @map("target_user_id")
   rating  Float?
+  review  String?
   message String
 
   occurredAt DateTime @map("occurred_at")
