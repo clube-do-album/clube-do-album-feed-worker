@@ -18,35 +18,63 @@ interface CreateUserFollowedFeedItemData {
 }
 
 export class FeedItemRepository {
-  list(limit: number) {
+  list({ limit, skip, type }: { limit: number; skip: number; type?: FeedItemType }) {
+    const where = type ? { type } : undefined;
+
     return prisma.feedItem.findMany({
+      where,
       take: limit,
+      skip,
       orderBy: {
         createdAt: 'desc',
       },
     });
   }
 
-  listByUserId(userId: string, limit: number) {
+  count(type?: FeedItemType) {
+    return prisma.feedItem.count({
+      where: type ? { type } : undefined,
+    });
+  }
+
+  listByUserId(userId: string, { limit, skip }: { limit: number; skip: number }) {
     return prisma.feedItem.findMany({
       where: {
         userId,
       },
       take: limit,
+      skip,
       orderBy: {
         createdAt: 'desc',
       },
     });
   }
 
-  listByAlbumId(albumId: string, limit: number) {
+  countByUserId(userId: string) {
+    return prisma.feedItem.count({
+      where: {
+        userId,
+      },
+    });
+  }
+
+  listByAlbumId(albumId: string, { limit, skip }: { limit: number; skip: number }) {
     return prisma.feedItem.findMany({
       where: {
         albumId,
       },
       take: limit,
+      skip,
       orderBy: {
         createdAt: 'desc',
+      },
+    });
+  }
+
+  countByAlbumId(albumId: string) {
+    return prisma.feedItem.count({
+      where: {
+        albumId,
       },
     });
   }
